@@ -1,21 +1,21 @@
 # Set the directory containing the scenes
-SCENE_DIR="/data1/hli/dataset/Neur3D"
+SCENE_DIR="/home/cgvmis418/GIFStream/dataset/VideoGS"
 # Set the directory to store results
-RESULT_DIR="/data1/hli/gscodec/GIFStream_branch"
+RESULT_DIR="/home/cgvmis418/GIFStream/gscodec/GIFStream_branch"
 # Set the rendering trajectory path
 RENDER_TRAJ_PATH="ellipse"
 # List of scenes to process
-SCENE_LIST="flame_salmon_1 coffee_martini sear_steak flame_steak cook_spinach cut_roasted_beef"
+SCENE_LIST="4K_Actor1_Greeting"
 # List of entropy lambda values (rate-distortion tradeoff parameter)
-ENTROPY_LAMBDA_LIST=(0.0005 0.001 0.002 0.004)
+ENTROPY_LAMBDA_LIST=(0.00001)
 # Data factor for training
 DATA_FACTOR=2
 # Number of frames per GOP (Group of Pictures)
-GOP=60
+GOP=50
 # The index of the first frame to process
 FIRST_FRAME=0
 # Total number of frames to process
-TOTAL_FRAME=300
+TOTAL_FRAME=200
 
 # Loop over each scene in the scene list
 for SCENE in $SCENE_LIST;
@@ -48,14 +48,14 @@ do
                     --render_traj_path $RENDER_TRAJ_PATH --data_dir $SCENE_DIR/$SCENE/ --result_dir $EXP_NAME \
                     --eval_steps 7000 30000 --save_steps 7000 30000 \
                     --compression_sim --rd_lambda ${ENTROPY_LAMBDA_LIST[RATE]} --entropy_model_opt --rate $RATE \
-                    --batch_size 1 --GOP_size $(( MAX_GOP < GOP ? MAX_GOP : GOP)) --knn --start_frame $GOP_START_FRAME
+                    --batch_size 1 --GOP_size $(( MAX_GOP < GOP ? MAX_GOP : GOP)) --knn --start_frame $GOP_START_FRAME --random-bkgd
 
                 # Run evaluation and rendering after training
                 CUDA_VISIBLE_DEVICES=0 python examples/simple_trainer_GIFStream.py $TYPE --disable_viewer --data_factor $DATA_FACTOR \
                     --render_traj_path $RENDER_TRAJ_PATH --data_dir $SCENE_DIR/$SCENE/ --result_dir $EXP_NAME \
                     --ckpt $EXP_NAME/ckpts/ckpt_29999_rank0.pt \
                     --compression end2end  --rate $RATE \
-                    --GOP_size $(( MAX_GOP < GOP ? MAX_GOP : GOP)) --knn --start_frame $GOP_START_FRAME 
+                    --GOP_size $(( MAX_GOP < GOP ? MAX_GOP : GOP)) --knn --start_frame $GOP_START_FRAME --random-bkgd
             else
                 # For subsequent GOPs, continue training from first checkpoint
                 CUDA_VISIBLE_DEVICES=0 python examples/simple_trainer_GIFStream.py $TYPE --disable_viewer --data_factor $DATA_FACTOR \
@@ -63,14 +63,14 @@ do
                     --eval_steps 7000 30000 --save_steps 7000 30000 \
                     --compression_sim --rd_lambda ${ENTROPY_LAMBDA_LIST[RATE]} --entropy_model_opt --rate $RATE \
                     --batch_size 1 --GOP_size $(( MAX_GOP < GOP ? MAX_GOP : GOP)) --knn --start_frame $GOP_START_FRAME \
-                    --ckpt $RESULT_DIR/${SCENE}/GOP_0/r$RATE/ckpts/ckpt_6999_rank0.pt --continue_training 
+                    --ckpt $RESULT_DIR/${SCENE}/GOP_0/r$RATE/ckpts/ckpt_6999_rank0.pt --continue_training  --random-bkgd
 
                 # Run evaluation and rendering after training
                 CUDA_VISIBLE_DEVICES=0 python examples/simple_trainer_GIFStream.py $TYPE --disable_viewer --data_factor $DATA_FACTOR \
                     --render_traj_path $RENDER_TRAJ_PATH --data_dir $SCENE_DIR/$SCENE/ --result_dir $EXP_NAME \
                     --ckpt $EXP_NAME/ckpts/ckpt_29999_rank0.pt \
                     --compression end2end  --rate $RATE \
-                    --GOP_size $(( MAX_GOP < GOP ? MAX_GOP : GOP)) --knn --start_frame $GOP_START_FRAME 
+                    --GOP_size $(( MAX_GOP < GOP ? MAX_GOP : GOP)) --knn --start_frame $GOP_START_FRAME --random-bkgd
             fi
         done
     done

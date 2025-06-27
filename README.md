@@ -61,7 +61,16 @@ For [Neur3D](https://github.com/facebookresearch/Neural_3D_Video/releases/tag/v1
 ```
 Then preprocess the data using the script as below.
 ```bash
-python dataset_process/n3d_video_process.py --root_dir your_path_to_neur3d_dataset
+#videogs
+python dataset_process/videogs_reorganize_images.py --source_dir /home/cgvmis418/GIFStream/dataset/VideoGS --target_dir /home/cgvmis418/GIFStream/dataset/VideoGS
+python dataset_process/n3d_video_process.py  \
+    --input_format colmap \
+    --colmap_path colmap/sparse  \
+    --root_dir /home/cgvmis418/GIFStream/dataset/VideoGS  \
+    --endframe 200
+    --GOP 50
+#nerf3d
+python dataset_process/n3d_video_process.py --root_dir /home/cgvmis418/GIFStream/dataset/Neur3D --extract_frames
 ```
 
 ### GIFStream Training and Compression

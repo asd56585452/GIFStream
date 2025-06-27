@@ -150,3 +150,6 @@ examples/benchmarks/stg/old
 # examples/benchmarks/mpeg
 
 *.zip
+/colmap
+/dataset
+/gscodec

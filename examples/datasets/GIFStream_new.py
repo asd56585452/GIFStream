@@ -44,6 +44,7 @@ class Parser:
         self.test_every = test_every
 
         colmap_dir = os.path.join(data_dir, f"colmap_{first_frame}", "sparse/0/")
+        print("colmap_dir",colmap_dir)
         if not os.path.exists(colmap_dir):
             colmap_dir = os.path.join(data_dir, "sparse/0/")
         assert os.path.exists(

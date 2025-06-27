@@ -1111,7 +1111,8 @@ class Runner:
 
 
                     if cfg.random_bkgd:
-                        bkgd = torch.rand(1, 3, device=device)
+                        # bkgd = torch.rand(1, 3, device=device)
+                        bkgd = torch.tensor([[1.0, 1.0, 1.0]], device=device)
                         colors = colors + bkgd * (1.0 - alphas)
 
                     self.cfg.strategy.step_pre_backward(
@@ -1318,7 +1319,7 @@ class Runner:
 
             torch.cuda.synchronize()
             tic = time.time()
-            colors, _, _ = self.rasterize_splats(
+            colors, alphas, _ = self.rasterize_splats(
                 camtoworlds=camtoworlds,
                 Ks=Ks,
                 width=width,
@@ -1334,6 +1335,10 @@ class Runner:
             ellipse_time += time.time() - tic
 
             colors = torch.clamp(colors, 0.0, 1.0)
+            if cfg.random_bkgd:
+                        # bkgd = torch.rand(1, 3, device=device)
+                        bkgd = torch.tensor([[1.0, 1.0, 1.0]], device=device)
+                        colors = colors + bkgd * (1.0 - alphas)
             canvas_list = [pixels, colors]
 
             if world_rank == 0:
