@@ -3,7 +3,7 @@ SCENE_DIR="/home/cgvmis418/GIFStream/dataset/VideoGS"
 # Set the directory to store results
 RESULT_DIR="/home/cgvmis418/GIFStream/gscodec/GIFStream_branch_videogs_more-refine"
 # Set the rendering trajectory path
-RENDER_TRAJ_PATH="spiral"
+RENDER_TRAJ_PATH="ellipse"
 # List of scenes to process
 SCENE_LIST="4K_Actor1_Greeting"
 # List of entropy lambda values (rate-distortion tradeoff parameter)
@@ -45,14 +45,6 @@ do
             # Calculate the maximum number of frames for this GOP
             MAX_GOP=$((TOTAL_FRAME + FIRST_FRAME - GOP_START_FRAME))
             if ((GOP_ID == 0)); then
-                # If this is the first GOP, train from scratch
-                CUDA_VISIBLE_DEVICES=0 python examples/simple_trainer_GIFStream.py $TYPE --disable_viewer --data_factor $DATA_FACTOR \
-                    --render_traj_path $RENDER_TRAJ_PATH --data_dir $SCENE_DIR/$SCENE/ --result_dir $EXP_NAME \
-                    --eval_steps $(( 7000 * SCALE )) $(( 30000 * SCALE )) --save_steps $(( 7000 * SCALE )) $(( 30000 * SCALE )) \
-                    --compression_sim --rd_lambda ${ENTROPY_LAMBDA_LIST[RATE]} --entropy_model_opt --rate $RATE \
-                    --batch_size 1 --GOP_size $(( MAX_GOP < GOP ? MAX_GOP : GOP)) --knn --start_frame $GOP_START_FRAME --random-bkgd \
-                    --strategy.refine-stop-iter $(( 15000 * SCALE )) --max-steps $(( 30000 * SCALE )) \
-                    --strategy.refine-every 100 --strategy.densify-grad-threshold 0.0001
 
                 # Run evaluation and rendering after training
                 CUDA_VISIBLE_DEVICES=0 python examples/simple_trainer_GIFStream.py $TYPE --disable_viewer --data_factor $DATA_FACTOR \
@@ -61,15 +53,6 @@ do
                     --compression end2end  --rate $RATE \
                     --GOP_size $(( MAX_GOP < GOP ? MAX_GOP : GOP)) --knn --start_frame $GOP_START_FRAME --random-bkgd
             else
-                # For subsequent GOPs, continue training from first checkpoint
-                CUDA_VISIBLE_DEVICES=0 python examples/simple_trainer_GIFStream.py $TYPE --disable_viewer --data_factor $DATA_FACTOR \
-                    --render_traj_path $RENDER_TRAJ_PATH --data_dir $SCENE_DIR/$SCENE/ --result_dir $EXP_NAME \
-                    --eval_steps $(( 7000 * SCALE )) $(( 30000 * SCALE )) --save_steps $(( 7000 * SCALE )) $(( 30000 * SCALE )) \
-                    --compression_sim --rd_lambda ${ENTROPY_LAMBDA_LIST[RATE]} --entropy_model_opt --rate $RATE \
-                    --batch_size 1 --GOP_size $(( MAX_GOP < GOP ? MAX_GOP : GOP)) --knn --start_frame $GOP_START_FRAME \
-                    --ckpt $RESULT_DIR/${SCENE}/GOP_0/r$RATE/ckpts/ckpt_$(( 7000 * SCALE - 1))_rank0.pt --continue_training  --random-bkgd \
-                    --strategy.refine-stop-iter $(( 15000 * SCALE )) --max-steps $(( 30000 * SCALE )) \
-                    --strategy.refine-every 100 --strategy.densify-grad-threshold 0.0001
 
                 # Run evaluation and rendering after training
                 CUDA_VISIBLE_DEVICES=0 python examples/simple_trainer_GIFStream.py $TYPE --disable_viewer --data_factor $DATA_FACTOR \

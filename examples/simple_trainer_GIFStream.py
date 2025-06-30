@@ -1124,7 +1124,21 @@ class Runner:
                     )
 
                     # loss
-                    l1loss = F.l1_loss(colors, pixels)
+                    l1loss_initial = F.l1_loss(colors, pixels)
+
+                    pixels_flat = pixels.view(-1, 3)
+                    with torch.no_grad():
+                        num_total_pixels = float(pixels_flat.shape[0])
+                        is_background_pixel = torch.all(pixels_flat == 1.0, dim=1)
+                        num_background_pixels = is_background_pixel.sum().float()
+                        num_foreground_pixels = num_total_pixels - num_background_pixels
+                    if num_foreground_pixels > 0:
+                        scaling_factor = num_total_pixels / num_foreground_pixels
+                    else:
+                        scaling_factor = 1.0
+                    l1loss = l1loss_initial * scaling_factor
+
+
                     ssimloss = 1.0 - fused_ssim(
                         colors.permute(0, 3, 1, 2), pixels.permute(0, 3, 1, 2), padding="valid"
                     )

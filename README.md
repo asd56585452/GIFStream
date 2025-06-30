@@ -67,7 +67,7 @@ python dataset_process/n3d_video_process.py  \
     --input_format colmap \
     --colmap_path colmap/sparse  \
     --root_dir /home/cgvmis418/GIFStream/dataset/VideoGS  \
-    --endframe 200
+    --endframe 200 \
     --GOP 50
 #nerf3d
 python dataset_process/n3d_video_process.py --root_dir /home/cgvmis418/GIFStream/dataset/Neur3D --extract_frames
