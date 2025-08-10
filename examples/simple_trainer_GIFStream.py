@@ -599,11 +599,41 @@ class Runner:
         # Viewer
         if not self.cfg.disable_viewer:
             self.server = viser.ViserServer(port=cfg.port, verbose=False)
-            self.viewer = nerfview.Viewer(
-                server=self.server,
-                render_fn=self._viewer_render_fn,
-                mode="training",
-            )
+            self.viewer_needs_update = True
+
+            with self.server.gui.add_folder("Playback"):
+                self.gui_playing = self.server.gui.add_checkbox("Playing", True)
+                self.timestamp_slider = self.server.gui.add_slider(
+                    "Timestamp", min=0, max=self.cfg.GOP_size - 1, step=1, initial_value=0
+                )
+                self.gui_next_frame = self.server.gui.add_button("Next Frame", disabled=True)
+                self.gui_prev_frame = self.server.gui.add_button("Prev Frame", disabled=True)
+
+            @self.gui_playing.on_update
+            def _(_) -> None:
+                self.timestamp_slider.disabled = self.gui_playing.value
+                self.gui_next_frame.disabled = self.gui_playing.value
+                self.gui_prev_frame.disabled = self.gui_playing.value
+                self.viewer_needs_update = True
+
+            @self.timestamp_slider.on_update
+            def _(_):
+                self.viewer_needs_update = True
+
+            @self.gui_next_frame.on_click
+            def _(_) -> None:
+                self.timestamp_slider.value = (self.timestamp_slider.value + 1) % self.cfg.GOP_size
+
+            @self.gui_prev_frame.on_click
+            def _(_) -> None:
+                self.timestamp_slider.value = (self.timestamp_slider.value - 1) % self.cfg.GOP_size
+
+            @self.server.on_client_connect
+            def _(client: viser.ClientHandle):
+                @client.camera.on_update
+                def _(_):
+                    self.viewer_needs_update = True
+
         if self.cfg.knn:
             self.indices = None
         self.istraining = False
@@ -1038,11 +1068,6 @@ class Runner:
             global_tic = time.time()
             pbar = tqdm.tqdm(range(init_step, max_steps))
             for step in pbar:
-                if not cfg.disable_viewer:
-                    while self.viewer.state.status == "paused":
-                        time.sleep(0.01)
-                    self.viewer.lock.acquire()
-                    tic = time.time()
 
                 try:
                     batch_data = next(trainloader_iter)
@@ -1295,15 +1320,9 @@ class Runner:
                     self.run_compression(step=step)
 
                 if not cfg.disable_viewer:
-                    self.viewer.lock.release()
-                    num_train_steps_per_sec = 1.0 / (time.time() - tic)
-                    num_train_rays_per_sec = (
-                        num_train_rays_per_step * num_train_steps_per_sec
-                    )
-                    # Update the viewer state.
-                    self.viewer.state.num_train_rays_per_sec = num_train_rays_per_sec
-                    # Update the scene.
-                    self.viewer.update(step, num_train_rays_per_step)
+                    if self.gui_playing.value:
+                        self.timestamp_slider.value = (self.timestamp_slider.value + 1) % self.cfg.GOP_size
+                    self._viewer_update()
         self.istraining = False
         
 
@@ -1601,25 +1620,50 @@ class Runner:
         self.decoders.load_state_dict(ckpt["decoders"])
 
     @torch.no_grad()
-    def _viewer_render_fn(
-        self, camera_state: nerfview.CameraState, img_wh: Tuple[int, int]
-    ):
+    def _viewer_update(self):
         """Callable function for the viewer."""
-        W, H = img_wh
-        c2w = camera_state.c2w
-        K = camera_state.get_K(img_wh)
-        c2w = torch.from_numpy(c2w).float().to(self.device)
-        K = torch.from_numpy(K).float().to(self.device)
+        if not hasattr(self, "server"):
+            return
+        if not self.viewer_needs_update:
+            return
 
-        render_colors, _, _ = self.rasterize_splats(
-            camtoworlds=c2w[None],
-            Ks=K[None],
-            width=W,
-            height=H,
-            sh_degree=None,
-            radius_clip=3.0,  # skip GSs that have small image radius (in pixels)
-        )  # [1, H, W, 3]
-        return render_colors[0].cpu().numpy()
+        try:
+            for client in self.server.get_clients().values():
+                camera_state = client.camera
+                W, H = 1920, 1080
+                c2w = camera_state.c2w
+                c2w = torch.from_numpy(c2w).float().to(self.device)
+
+                focal_length = H / 2.0 / np.tan(camera_state.fov / 2.0)
+                K = torch.tensor(
+                    [
+                        [focal_length, 0.0, W / 2.0],
+                        [0.0, focal_length, H / 2.0],
+                        [0.0, 0.0, 1.0],
+                    ],
+                    dtype=torch.float32,
+                    device=self.device,
+                )
+
+                timestamp = self.timestamp_slider.value
+                normalized_time = timestamp / (self.cfg.GOP_size - 1)
+
+                render_colors, _, _ = self.rasterize_splats(
+                    camtoworlds=c2w[None],
+                    Ks=K[None],
+                    width=W,
+                    height=H,
+                    sh_degree=None,
+                    radius_clip=3.0,
+                    time=normalized_time,
+                )
+
+                out = render_colors[0].cpu().numpy()
+                client.set_background_image(out, format="jpeg")
+        except RuntimeError as e:
+            print(e)
+
+        self.viewer_needs_update = False
 
 
 def main(local_rank: int, world_rank, world_size: int, cfg: Config):
@@ -1670,7 +1714,11 @@ def main(local_rank: int, world_rank, world_size: int, cfg: Config):
 
     if not cfg.disable_viewer:
         print("Viewer running... Ctrl+C to exit.")
-        time.sleep(1000000)
+        while True:
+            if runner.gui_playing.value:
+                runner.timestamp_slider.value = (runner.timestamp_slider.value + 1) % runner.cfg.GOP_size
+            runner._viewer_update()
+            time.sleep(0.01)
 
 def quaternion_to_rotation_matrix(quaternion):
     if quaternion.dim() == 1:
