@@ -3,6 +3,7 @@ import math
 import os
 import time
 import shutil
+import threading
 from contextlib import nullcontext
 from dataclasses import dataclass, field
 from collections import defaultdict
@@ -40,6 +41,33 @@ from gsplat.rendering import rasterization, view_to_visible_anchors
 from gsplat.strategy import GIFStreamStrategy
 
 from gsplat.compression_simulation.simulation import GIFStreamCompressionSimulation
+
+def qvec2rotmat(qvec):
+    return np.array(
+        [
+            [
+                1 - 2 * qvec[2] ** 2 - 2 * qvec[3] ** 2,
+                2 * qvec[1] * qvec[2] - 2 * qvec[0] * qvec[3],
+                2 * qvec[3] * qvec[1] + 2 * qvec[0] * qvec[2],
+            ],
+            [
+                2 * qvec[1] * qvec[2] + 2 * qvec[0] * qvec[3],
+                1 - 2 * qvec[1] ** 2 - 2 * qvec[3] ** 2,
+                2 * qvec[2] * qvec[3] - 2 * qvec[0] * qvec[1],
+            ],
+            [
+                2 * qvec[3] * qvec[1] - 2 * qvec[0] * qvec[2],
+                2 * qvec[2] * qvec[3] + 2 * qvec[0] * qvec[1],
+                1 - 2 * qvec[1] ** 2 - 2 * qvec[2] ** 2,
+            ],
+        ]
+    )
+
+def get_c2w(camera):
+    c2w = np.eye(4, dtype=np.float32)
+    c2w[:3, :3] = qvec2rotmat(camera.wxyz)
+    c2w[:3, 3] = camera.position
+    return c2w
 
 class ProfilerConfig:
     def __init__(self):
@@ -595,6 +623,8 @@ class Runner:
             ).to(self.device)
         else:
             raise ValueError(f"Unknown LPIPS network: {cfg.lpips_net}")
+
+        self.update_lock = threading.Lock()
 
         # Viewer
         if not self.cfg.disable_viewer:
@@ -1260,31 +1290,32 @@ class Runner:
                         data, f"{self.ckpt_dir}/ckpt_{step}_rank{self.world_rank}.pt"
                     )
 
-                # optimize
-                for optimizer in self.optimizers.values():
-                    optimizer.step()
-                    optimizer.zero_grad(set_to_none=True)
-                for optimizer in self.net_optimizers.values():
-                    optimizer.step()
-                    optimizer.zero_grad(set_to_none=True)
-                for optimizer in self.app_optimizers:
-                    optimizer.step()
-                    optimizer.zero_grad(set_to_none=True)
-                for optimizer in self.bil_grid_optimizers:
-                    optimizer.step()
-                    optimizer.zero_grad(set_to_none=True)
-                for scheduler in schedulers:
-                    scheduler.step()
-                # (optional) entropy model params. optimize
-                if cfg.compression_sim:
-                    if cfg.entropy_model_opt:
-                        for name, optimizer in self.compression_sim_method.entropy_model_optimizers.items():
-                            if optimizer is not None:
-                                optimizer.step()
-                                optimizer.zero_grad(set_to_none=True)
-                        for name, scheduler in self.compression_sim_method.entropy_model_schedulers.items():
-                            if scheduler is not None and step > cfg.entropy_steps[name]:
-                                scheduler.step()
+                with self.update_lock:
+                    # optimize
+                    for optimizer in self.optimizers.values():
+                        optimizer.step()
+                        optimizer.zero_grad(set_to_none=True)
+                    for optimizer in self.net_optimizers.values():
+                        optimizer.step()
+                        optimizer.zero_grad(set_to_none=True)
+                    for optimizer in self.app_optimizers:
+                        optimizer.step()
+                        optimizer.zero_grad(set_to_none=True)
+                    for optimizer in self.bil_grid_optimizers:
+                        optimizer.step()
+                        optimizer.zero_grad(set_to_none=True)
+                    for scheduler in schedulers:
+                        scheduler.step()
+                    # (optional) entropy model params. optimize
+                    if cfg.compression_sim:
+                        if cfg.entropy_model_opt:
+                            for name, optimizer in self.compression_sim_method.entropy_model_optimizers.items():
+                                if optimizer is not None:
+                                    optimizer.step()
+                                    optimizer.zero_grad(set_to_none=True)
+                            for name, scheduler in self.compression_sim_method.entropy_model_schedulers.items():
+                                if scheduler is not None and step > cfg.entropy_steps[name]:
+                                    scheduler.step()
 
                 # Run post-backward steps after backward and optimizer
                 if isinstance(self.cfg.strategy, GIFStreamStrategy):
@@ -1627,41 +1658,42 @@ class Runner:
         if not self.viewer_needs_update:
             return
 
-        try:
-            for client in self.server.get_clients().values():
-                camera_state = client.camera
-                W, H = 1920, 1080
-                c2w = camera_state.c2w
-                c2w = torch.from_numpy(c2w).float().to(self.device)
+        with self.update_lock:
+            try:
+                for client in self.server.get_clients().values():
+                    camera_state = client.camera
+                    W, H = 1920, 1080
+                    c2w = get_c2w(camera_state)
+                    c2w = torch.from_numpy(c2w).float().to(self.device)
 
-                focal_length = H / 2.0 / np.tan(camera_state.fov / 2.0)
-                K = torch.tensor(
-                    [
-                        [focal_length, 0.0, W / 2.0],
-                        [0.0, focal_length, H / 2.0],
-                        [0.0, 0.0, 1.0],
-                    ],
-                    dtype=torch.float32,
-                    device=self.device,
-                )
+                    focal_length = H / 2.0 / np.tan(camera_state.fov / 2.0)
+                    K = torch.tensor(
+                        [
+                            [focal_length, 0.0, W / 2.0],
+                            [0.0, focal_length, H / 2.0],
+                            [0.0, 0.0, 1.0],
+                        ],
+                        dtype=torch.float32,
+                        device=self.device,
+                    )
 
-                timestamp = self.timestamp_slider.value
-                normalized_time = timestamp / (self.cfg.GOP_size - 1)
+                    timestamp = self.timestamp_slider.value
+                    normalized_time = timestamp / (self.cfg.GOP_size - 1)
 
-                render_colors, _, _ = self.rasterize_splats(
-                    camtoworlds=c2w[None],
-                    Ks=K[None],
-                    width=W,
-                    height=H,
-                    sh_degree=None,
-                    radius_clip=3.0,
-                    time=normalized_time,
-                )
+                    render_colors, _, _ = self.rasterize_splats(
+                        camtoworlds=c2w[None],
+                        Ks=K[None],
+                        width=W,
+                        height=H,
+                        sh_degree=None,
+                        radius_clip=3.0,
+                        time=normalized_time,
+                    )
 
-                out = render_colors[0].cpu().numpy()
-                client.set_background_image(out, format="jpeg")
-        except RuntimeError as e:
-            print(e)
+                    out = render_colors[0].cpu().numpy()
+                    client.set_background_image(out, format="jpeg")
+            except RuntimeError as e:
+                print(e)
 
         self.viewer_needs_update = False
 
