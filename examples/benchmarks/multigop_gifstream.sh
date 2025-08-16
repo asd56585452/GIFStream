@@ -1,11 +1,11 @@
 # Set the directory containing the scenes
-SCENE_DIR="/data1/hli/dataset/Neur3D"
+SCENE_DIR="/home/cgvmis418/GIFStream/dataset/Neur3D"
 # Set the directory to store results
-RESULT_DIR="/data1/hli/gscodec/GIFStream_branch"
+RESULT_DIR="/home/cgvmis418/GIFStream/gscodec/GIFStream_branch"
 # Set the rendering trajectory path
 RENDER_TRAJ_PATH="ellipse"
 # List of scenes to process
-SCENE_LIST="flame_salmon_1 coffee_martini sear_steak flame_steak cook_spinach cut_roasted_beef"
+SCENE_LIST="coffee_martini sear_steak flame_steak cook_spinach cut_roasted_beef"
 # List of entropy lambda values (rate-distortion tradeoff parameter)
 ENTROPY_LAMBDA_LIST=(0.0005 0.001 0.002 0.004)
 # Data factor for training

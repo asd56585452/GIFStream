@@ -61,7 +61,7 @@ For [Neur3D](https://github.com/facebookresearch/Neural_3D_Video/releases/tag/v1
 ```
 Then preprocess the data using the script as below.
 ```bash
-python dataset_process/n3d_video_process.py --root_dir your_path_to_neur3d_dataset
+python dataset_process/n3d_video_process.py --root_dir your_path_to_neur3d_dataset --extract_frames
 ```
 
 ### GIFStream Training and Compression
