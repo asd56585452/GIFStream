@@ -152,6 +152,11 @@ if __name__ == "__main__":
         hd_cameras = [cam for cam in calibration_data['cameras'] if cam.get('type') == 'hd']
         hd_cameras = sorted(hd_cameras, key=lambda x: x['name'])
 
+        # --- DEBUG: Test with only the first 31 cameras ---
+        print("DEBUG: Testing with only the first 31 cameras.")
+        hd_cameras = hd_cameras[:31]
+        # --- END DEBUG ---
+
         if args.extract_frames:
             if not os.path.exists(output_path):
                 os.makedirs(output_path)
