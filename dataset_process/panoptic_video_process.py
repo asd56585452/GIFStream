@@ -21,7 +21,7 @@ def rotmat2qvec(R):
         qvec *= -1
     return qvec
 
-def convert_panoptic_to_colmap_db(path, calibration_data, offset=0):
+def convert_panoptic_to_colmap_db(path, hd_cameras, offset=0):
     projectfolder = os.path.join(path, "colmap_" + str(offset))
     manualfolder = os.path.join(projectfolder, "manual")
 
@@ -39,18 +39,14 @@ def convert_panoptic_to_colmap_db(path, calibration_data, offset=0):
     db = COLMAPDatabase.connect(os.path.join(projectfolder, "input.db"))
     db.create_tables()
 
-    cameras = calibration_data.get('cameras', [])
-    for i, cam_info in enumerate(cameras):
+    for i, cam_info in enumerate(hd_cameras):
         R = np.array(cam_info['R'])
         t = np.array(cam_info['t']).flatten()
         K = np.array(cam_info['K'])
 
-        # Panoptic t is camera position in world coords. COLMAP T is -R @ t
         T = -np.dot(R, t)
 
         W, H = cam_info['resolution']
-        # Panoptic K is [fx, s, cx], [0, fy, cy], [0, 0, 1]
-        # We assume skew s is 0
         focal_x = K[0,0]
         focal_y = K[1,1]
         cx = K[0,2]
@@ -61,15 +57,13 @@ def convert_panoptic_to_colmap_db(path, calibration_data, offset=0):
         image_id = i + 1
         camera_id = i + 1
 
-        # The images are copied as cam00.png, cam01.png etc. in the main loop.
-        pngname = f"cam{i:02d}.png"
-
+        pngname = f"cam_{cam_info['name']}.png"
 
         line = f"{image_id} {qvec[0]} {qvec[1]} {qvec[2]} {qvec[3]} {T[0]} {T[1]} {T[2]} {camera_id} {pngname}\n\n"
         imagetxtlist.append(line)
 
         params = np.array((focal_x, focal_y, cx, cy))
-        db.add_camera(model=1, width=W, height=H, params=params, camera_id=camera_id) # PINHOLE camera model
+        db.add_camera(model=1, width=W, height=H, params=params, camera_id=camera_id)
         cameraline = f"{camera_id} PINHOLE {W} {H} {focal_x} {focal_y} {cx} {cy}\n"
         cameratxtlist.append(cameraline)
 
@@ -83,7 +77,7 @@ def convert_panoptic_to_colmap_db(path, calibration_data, offset=0):
     with open(savecamera, "w") as f:
         f.writelines(cameratxtlist)
     with open(savepoints, "w") as f:
-        pass # Empty points3D.txt
+        pass
 
 def run_colmap(path, offset):
     folder = os.path.join(path, "colmap_" + str(offset))
@@ -137,49 +131,51 @@ if __name__ == "__main__":
         video_folder = os.path.join(scene_path, "hdVideos")
         output_path = os.path.join(scene_path, "images")
 
-        if args.extract_frames:
-            if not os.path.exists(output_path):
-                os.makedirs(output_path)
-
-            mp4_files = sorted(glob.glob(os.path.join(video_folder, "*.mp4")))
-            for idx, video_path in enumerate(mp4_files):
-                cam_name = f"cam{idx:02d}"
-                output_cam_folder = os.path.join(output_path, cam_name)
-                if not os.path.exists(output_cam_folder):
-                    os.makedirs(output_cam_folder)
-
-                # Use ffmpeg's select filter for precise frame extraction
-                cmd = (f"ffmpeg -i {video_path} -vf \"select='between(n,{args.start_frame},{args.end_frame})',setpts=PTS-STARTPTS\" "
-                       f"-vsync vfr {output_cam_folder}/%05d.png")
-                subprocess.call(cmd, shell=True)
-
-        # Find calibration file
         calibration_file = glob.glob(os.path.join(scene_path, "calibration*.json"))
         if not calibration_file:
-            print(f"Calibration file not found in {scene_path}, skipping COLMAP processing.")
+            print(f"Calibration file not found in {scene_path}, skipping.")
             continue
 
         with open(calibration_file[0]) as f:
             calibration_data = json.load(f)
 
-        # For now, we process the start_frame as the reference
+        hd_cameras = [cam for cam in calibration_data['cameras'] if cam.get('type') == 'hd']
+        hd_cameras = sorted(hd_cameras, key=lambda x: x['name'])
+
+        if args.extract_frames:
+            if not os.path.exists(output_path):
+                os.makedirs(output_path)
+
+            for cam_info in hd_cameras:
+                cam_name = cam_info['name']
+                video_path = os.path.join(video_folder, f"hd_{cam_name}.mp4")
+                if not os.path.exists(video_path):
+                    print(f"Video file not found: {video_path}")
+                    continue
+
+                output_cam_folder = os.path.join(output_path, f"cam_{cam_name}")
+                if not os.path.exists(output_cam_folder):
+                    os.makedirs(output_cam_folder)
+
+                cmd = (f"ffmpeg -i {video_path} -vf \"select='between(n,{args.start_frame},{args.end_frame})',setpts=PTS-STARTPTS\" "
+                       f"-vsync vfr {output_cam_folder}/%05d.png")
+                subprocess.call(cmd, shell=True)
+
         colmap_offset = args.start_frame
         colmap_path = os.path.join(scene_path, f"colmap_{colmap_offset}")
         input_image_path = os.path.join(colmap_path, "input")
         if not os.path.exists(input_image_path):
             os.makedirs(input_image_path)
 
-        # Copy the first frame of each camera's extracted sequence to the colmap input folder
-        camera_folders = sorted(glob.glob(os.path.join(output_path, "cam*")))
-        for i, cam_folder in enumerate(camera_folders):
-            # ffmpeg with `setpts=PTS-STARTPTS` re-timestamps frames to start from 0,
-            # and the output pngs are numbered starting from 00001.png
+        for cam_info in hd_cameras:
+            cam_name = cam_info['name']
+            cam_folder = os.path.join(output_path, f"cam_{cam_name}")
             first_frame_filename = "00001.png"
             frame_file = os.path.join(cam_folder, first_frame_filename)
             if os.path.exists(frame_file):
-                shutil.copy(frame_file, os.path.join(input_image_path, f"cam{i:02d}.png"))
+                shutil.copy(frame_file, os.path.join(input_image_path, f"cam_{cam_name}.png"))
             else:
-                print(f"Warning: Could not find {frame_file} for cam {i:02d}")
+                print(f"Warning: Could not find {frame_file} for cam {cam_name}")
 
-        convert_panoptic_to_colmap_db(scene_path, calibration_data, colmap_offset)
+        convert_panoptic_to_colmap_db(scene_path, hd_cameras, colmap_offset)
         run_colmap(scene_path, colmap_offset)
