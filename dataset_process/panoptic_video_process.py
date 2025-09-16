@@ -69,7 +69,7 @@ def convert_panoptic_to_colmap_db(path, calibration_data, offset=0):
         imagetxtlist.append(line)
 
         params = np.array((focal_x, focal_y, cx, cy))
-        db.add_camera(camera_model=1, width=W, height=H, params=params, camera_id=camera_id) # PINHOLE camera model
+        db.add_camera(model=1, width=W, height=H, params=params, camera_id=camera_id) # PINHOLE camera model
         cameraline = f"{camera_id} PINHOLE {W} {H} {focal_x} {focal_y} {cx} {cy}\n"
         cameratxtlist.append(cameraline)
 
