@@ -172,8 +172,8 @@ if __name__ == "__main__":
                 if not os.path.exists(output_cam_folder):
                     os.makedirs(output_cam_folder)
 
-                cmd = (f"ffmpeg -i {video_path} -vf \"select='between(n,{args.start_frame},{args.end_frame})',setpts=PTS-STARTPTS\" "
-                       f"-vsync vfr {output_cam_folder}/%05d.png")
+                cmd = (f"ffmpeg -i {video_path} -vf \"select='between(n,{args.start_frame},{args.end_frame})'\" "
+                       f"-start_number {args.start_frame + 1} -vsync vfr {output_cam_folder}/%05d.png")
                 subprocess.call(cmd, shell=True)
 
         colmap_offset = args.start_frame
@@ -185,7 +185,7 @@ if __name__ == "__main__":
         for cam_info in hd_cameras:
             cam_name = cam_info['name']
             cam_folder = os.path.join(output_path, f"cam_{cam_name}")
-            first_frame_filename = "00001.png"
+            first_frame_filename = f"{(args.start_frame + 1):05d}.png"
             frame_file = os.path.join(cam_folder, first_frame_filename)
             if os.path.exists(frame_file):
                 shutil.copy(frame_file, os.path.join(input_image_path, f"cam_{cam_name}.png"))
