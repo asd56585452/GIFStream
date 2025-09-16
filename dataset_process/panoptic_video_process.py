@@ -96,7 +96,6 @@ def run_colmap(path, offset):
     dbfile = os.path.join(folder, "input.db")
     inputimagefolder = os.path.join(folder, "input")
     distortedmodel = os.path.join(folder, "distorted/sparse")
-    manualinputfolder = os.path.join(folder, "manual")
 
     if not os.path.exists(distortedmodel):
         os.makedirs(distortedmodel)
@@ -107,10 +106,12 @@ def run_colmap(path, offset):
     feature_matcher_cmd = f"colmap exhaustive_matcher --database_path {dbfile}"
     subprocess.run(feature_matcher_cmd, shell=True, check=True)
 
-    point_triangulator_cmd = f"colmap point_triangulator --database_path {dbfile} --image_path {inputimagefolder} --output_path {distortedmodel} --input_path {manualinputfolder}"
-    subprocess.run(point_triangulator_cmd, shell=True, check=True)
+    # Use mapper to re-estimate poses instead of relying on calibration file
+    mapper_cmd = f"colmap mapper --database_path {dbfile} --image_path {inputimagefolder} --output_path {distortedmodel}"
+    subprocess.run(mapper_cmd, shell=True, check=True)
 
-    img_undistorter_cmd = f"colmap image_undistorter --image_path {inputimagefolder} --input_path {distortedmodel} --output_path {folder} --output_type COLMAP"
+    # Point image_undistorter to the model reconstructed by the mapper
+    img_undistorter_cmd = f"colmap image_undistorter --image_path {inputimagefolder} --input_path {os.path.join(distortedmodel, '0')} --output_path {folder} --output_type COLMAP"
     subprocess.run(img_undistorter_cmd, shell=True, check=True)
 
     shutil.rmtree(inputimagefolder)
