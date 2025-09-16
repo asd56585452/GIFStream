@@ -139,7 +139,7 @@ if __name__ == "__main__":
             continue
 
         video_folder = os.path.join(scene_path, "hdVideos")
-        output_path = os.path.join(scene_path, "images")
+        output_path = os.path.join(scene_path, "png")
 
         calibration_file = glob.glob(os.path.join(scene_path, "calibration*.json"))
         if not calibration_file:

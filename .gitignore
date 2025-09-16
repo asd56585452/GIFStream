@@ -153,3 +153,7 @@ examples/benchmarks/stg/old
 /colmap
 /gscodec
 /dataset/panoptic/161029_sports1/hdVideos
+/dataset/panoptic/161029_sports1/colmap_3900
+/dataset/panoptic/161029_sports1/images
+/dataset/Neur3D
+/dataset/panoptic/161029_sports1/png
