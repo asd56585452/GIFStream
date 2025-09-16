@@ -43,14 +43,21 @@ def convert_panoptic_to_colmap_db(path, hd_cameras, offset=0):
         R = np.array(cam_info['R'])
         t = np.array(cam_info['t']).flatten()
         K = np.array(cam_info['K'])
+        dist = np.array(cam_info['distCoef']).flatten()
 
-        T = -np.dot(R, t)
+        # Correct extrinsic conversion: C = -R^T * t
+        T = -np.dot(R.T, t)
 
         W, H = cam_info['resolution']
         focal_x = K[0,0]
         focal_y = K[1,1]
         cx = K[0,2]
         cy = K[1,2]
+
+        # Use OPENCV model which supports distortion
+        # It expects fx, fy, cx, cy, k1, k2, p1, p2
+        # Panoptic provides k1, k2, p1, p2, k3. We'll use the first 4.
+        params = np.array([focal_x, focal_y, cx, cy, dist[0], dist[1], dist[2], dist[3]])
 
         qvec = rotmat2qvec(R)
 
@@ -62,9 +69,12 @@ def convert_panoptic_to_colmap_db(path, hd_cameras, offset=0):
         line = f"{image_id} {qvec[0]} {qvec[1]} {qvec[2]} {qvec[3]} {T[0]} {T[1]} {T[2]} {camera_id} {pngname}\n\n"
         imagetxtlist.append(line)
 
-        params = np.array((focal_x, focal_y, cx, cy))
-        db.add_camera(model=1, width=W, height=H, params=params, camera_id=camera_id)
-        cameraline = f"{camera_id} PINHOLE {W} {H} {focal_x} {focal_y} {cx} {cy}\n"
+        # COLMAP OPENCV camera model is ID 4
+        camera_model_id = 4
+        db.add_camera(model=camera_model_id, width=W, height=H, params=params, camera_id=camera_id)
+
+        param_str = " ".join(map(str, params))
+        cameraline = f"{camera_id} OPENCV {W} {H} {param_str}\n"
         cameratxtlist.append(cameraline)
 
         db.add_image(name=pngname, camera_id=camera_id, prior_q=qvec, prior_t=T, image_id=image_id)
@@ -91,7 +101,7 @@ def run_colmap(path, offset):
     if not os.path.exists(distortedmodel):
         os.makedirs(distortedmodel)
 
-    feature_extractor_cmd = f"colmap feature_extractor --database_path {dbfile} --image_path {inputimagefolder} --ImageReader.camera_model PINHOLE"
+    feature_extractor_cmd = f"colmap feature_extractor --database_path {dbfile} --image_path {inputimagefolder}"
     subprocess.run(feature_extractor_cmd, shell=True, check=True)
 
     feature_matcher_cmd = f"colmap exhaustive_matcher --database_path {dbfile}"
