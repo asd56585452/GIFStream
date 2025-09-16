@@ -151,5 +151,5 @@ examples/benchmarks/stg/old
 
 *.zip
 /colmap
-/dataset
 /gscodec
+/dataset/panoptic/161029_sports1/hdVideos
