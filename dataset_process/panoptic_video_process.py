@@ -106,8 +106,12 @@ def run_colmap(path, offset):
     feature_matcher_cmd = f"colmap exhaustive_matcher --database_path {dbfile}"
     subprocess.run(feature_matcher_cmd, shell=True, check=True)
 
-    # Use mapper to re-estimate poses instead of relying on calibration file
-    mapper_cmd = f"colmap mapper --database_path {dbfile} --image_path {inputimagefolder} --output_path {distortedmodel}"
+    # Use mapper to re-estimate poses, but keep the intrinsics from the calibration file fixed.
+    mapper_cmd = (
+        f"colmap mapper --database_path {dbfile} --image_path {inputimagefolder} "
+        f"--output_path {distortedmodel} --Mapper.ba_refine_focal_length=0 "
+        f"--Mapper.ba_refine_principal_point=0 --Mapper.ba_refine_extra_params=0"
+    )
     subprocess.run(mapper_cmd, shell=True, check=True)
 
     # Point image_undistorter to the model reconstructed by the mapper
