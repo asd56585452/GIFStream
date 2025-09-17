@@ -115,19 +115,19 @@ def run_colmap(path, offset):
     subprocess.run(mapper_cmd, shell=True, check=True)
 
     # Point image_undistorter to the model reconstructed by the mapper
-    img_undistorter_cmd = f"colmap image_undistorter --image_path {inputimagefolder} --input_path {os.path.join(distortedmodel, '0')} --output_path {folder} --output_type COLMAP"
-    subprocess.run(img_undistorter_cmd, shell=True, check=True)
+    # img_undistorter_cmd = f"colmap image_undistorter --image_path {inputimagefolder} --input_path {os.path.join(distortedmodel, '0')} --output_path {folder} --output_type COLMAP"
+    # subprocess.run(img_undistorter_cmd, shell=True, check=True)
 
-    shutil.rmtree(inputimagefolder)
+    # shutil.rmtree(inputimagefolder)
 
-    files = os.listdir(os.path.join(folder, "sparse"))
-    os.makedirs(os.path.join(folder, "sparse/0"), exist_ok=True)
-    for file in files:
-        if file == '0':
-            continue
-        source_file = os.path.join(folder, "sparse", file)
-        destination_file = os.path.join(folder, "sparse", "0", file)
-        shutil.move(source_file, destination_file)
+    # files = os.listdir(os.path.join(folder, "sparse"))
+    # os.makedirs(os.path.join(folder, "sparse/0"), exist_ok=True)
+    # for file in files:
+    #     if file == '0':
+    #         continue
+    #     source_file = os.path.join(folder, "sparse", file)
+    #     destination_file = os.path.join(folder, "sparse", "0", file)
+    #     shutil.move(source_file, destination_file)
 
 if __name__ == "__main__":
     parser = ArgumentParser(description="Panoptic Sport Dataset Processor")

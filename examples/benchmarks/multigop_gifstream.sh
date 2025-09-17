@@ -5,7 +5,7 @@ RESULT_DIR="/home/cgvmis418/GIFStream/gscodec/GIFStream_branch"
 # Set the rendering trajectory path
 RENDER_TRAJ_PATH="ellipse"
 # List of scenes to process
-SCENE_LIST="sear_steak cut_roasted_beef"
+SCENE_LIST="sear_steak"
 # List of entropy lambda values (rate-distortion tradeoff parameter)
 ENTROPY_LAMBDA_LIST=(0.0005)
 # Data factor for training
