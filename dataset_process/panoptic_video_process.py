@@ -45,8 +45,8 @@ def convert_panoptic_to_colmap_db(path, hd_cameras, offset=0):
         K = np.array(cam_info['K'])
         dist = np.array(cam_info['distCoef']).flatten()
 
-        # Correct extrinsic conversion: C = -R^T * t
-        T = -np.dot(R.T, t)
+        # `t` is the translation vector from world to camera. This is what COLMAP expects.
+        T = t
 
         W, H = cam_info['resolution']
         focal_x = K[0,0]
