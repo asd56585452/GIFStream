@@ -110,19 +110,22 @@ def run_colmap(path, offset):
     point_triangulator_cmd = f"colmap point_triangulator --database_path {dbfile} --image_path {inputimagefolder} --output_path {distortedmodel} --input_path {manualinputfolder}"
     subprocess.run(point_triangulator_cmd, shell=True, check=True)
 
-    img_undistorter_cmd = f"colmap image_undistorter --image_path {inputimagefolder} --input_path {distortedmodel} --output_path {folder} --output_type COLMAP"
-    subprocess.run(img_undistorter_cmd, shell=True, check=True)
+    # img_undistorter_cmd = f"colmap image_undistorter --image_path {inputimagefolder} --input_path {distortedmodel} --output_path {folder} --output_type COLMAP"
+    # subprocess.run(img_undistorter_cmd, shell=True, check=True)
 
     shutil.rmtree(inputimagefolder)
 
-    files = os.listdir(os.path.join(folder, "sparse"))
-    os.makedirs(os.path.join(folder, "sparse/0"), exist_ok=True)
-    for file in files:
-        if file == '0':
-            continue
-        source_file = os.path.join(folder, "sparse", file)
-        destination_file = os.path.join(folder, "sparse", "0", file)
-        shutil.move(source_file, destination_file)
+    # Move the sparse model from distorted/sparse to sparse/0
+    target_sparse_path = os.path.join(folder, "sparse", "0")
+    os.makedirs(target_sparse_path, exist_ok=True)
+
+    files_to_move = os.listdir(distortedmodel)
+    for file_name in files_to_move:
+        source = os.path.join(distortedmodel, file_name)
+        destination = os.path.join(target_sparse_path, file_name)
+        shutil.move(source, destination)
+
+    shutil.rmtree(os.path.join(folder, "distorted"))
 
 if __name__ == "__main__":
     parser = ArgumentParser(description="Panoptic Sport Dataset Processor")

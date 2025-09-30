@@ -35,7 +35,7 @@ class GIFStreamStrategy(Strategy):
     refine_start_iter: int = 500
     refine_stop_iter: int = 15_000
     # reset_every: int = 3000
-    refine_every: int = 100
+    refine_every: int = 10
     # pause_refine_after_reset: int = 0
     absgrad: bool = False
     revised_opacity: bool = False

@@ -9,7 +9,7 @@ SCENE_LIST="161029_sports1"
 # List of entropy lambda values (rate-distortion tradeoff parameter)
 ENTROPY_LAMBDA_LIST=(0.0005)
 # Data factor for training
-DATA_FACTOR=2
+DATA_FACTOR=1
 # Number of frames per GOP (Group of Pictures)
 GOP=60
 # The index of the first frame to process
@@ -23,13 +23,7 @@ chmod +x examples/benchmarks/monitor_vram_pro.sh
 for SCENE in $SCENE_LIST;
 do
     # Set TYPE based on the scene name
-    if [ "$SCENE" = "coffee_martini" ]; then
-        TYPE=neur3d_2
-    elif [ "$SCENE" = "flame_salmon_1" ]; then
-        TYPE=neur3d_1
-    else
-        TYPE=neur3d_0
-    fi
+    TYPE=panoptic
 
     # Loop over each entropy lambda (rate)
     for ((RATE=0; RATE<${#ENTROPY_LAMBDA_LIST[@]}; RATE++));
@@ -50,12 +44,12 @@ do
                     --render_traj_path $RENDER_TRAJ_PATH --data_dir $SCENE_DIR/$SCENE/ --result_dir $EXP_NAME \
                     --eval_steps 7000 30000 --save_steps 7000 30000 \
                     --compression_sim --rd_lambda ${ENTROPY_LAMBDA_LIST[RATE]} --entropy_model_opt --rate $RATE \
-                    --batch_size 1 --GOP_size $(( MAX_GOP < GOP ? MAX_GOP : GOP)) --knn --start_frame $GOP_START_FRAME
+                    --batch_size 1 --GOP_size $(( MAX_GOP < GOP ? MAX_GOP : GOP)) --knn --start_frame $GOP_START_FRAME --steps_scaler 10
 
                 # Run evaluation and rendering after training
                 ./examples/benchmarks/monitor_vram_pro.sh CUDA_VISIBLE_DEVICES=0 python examples/simple_trainer_GIFStream.py $TYPE --disable_viewer --data_factor $DATA_FACTOR \
                     --render_traj_path $RENDER_TRAJ_PATH --data_dir $SCENE_DIR/$SCENE/ --result_dir $EXP_NAME \
-                    --ckpt $EXP_NAME/ckpts/ckpt_29999_rank0.pt \
+                    --ckpt $EXP_NAME/ckpts/ckpt_299999_rank0.pt \
                     --compression end2end  --rate $RATE \
                     --GOP_size $(( MAX_GOP < GOP ? MAX_GOP : GOP)) --knn --start_frame $GOP_START_FRAME 
             else

@@ -5,7 +5,7 @@ RESULT_DIR="/home/cgvmis418/GIFStream/gscodec/GIFStream_branch"
 # Set the rendering trajectory path
 RENDER_TRAJ_PATH="ellipse"
 # List of scenes to process
-SCENE_LIST="sear_steak cut_roasted_beef"
+SCENE_LIST="sear_steak"
 # List of entropy lambda values (rate-distortion tradeoff parameter)
 ENTROPY_LAMBDA_LIST=(0.0005)
 # Data factor for training
@@ -13,7 +13,7 @@ DATA_FACTOR=2
 # Number of frames per GOP (Group of Pictures)
 GOP=60
 # The index of the first frame to process
-FIRST_FRAME=0
+FIRST_FRAME=60
 # Total number of frames to process
 TOTAL_FRAME=60
 

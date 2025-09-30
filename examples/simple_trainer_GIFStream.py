@@ -1730,6 +1730,18 @@ if __name__ == "__main__":
                 app_opt=False,
             ),
         ),
+        "panoptic": (
+            "panoptic dataset",
+            Config(
+                strategy=GIFStreamStrategy(verbose=True,densify_grad_threshold=0.0005,deformation_gate=0.03),
+                test_set=[0],
+                normalize_world_space=False,
+                anchor_feature_dim=24,
+                c_perframe = 4,
+                app_opt=True,
+                app_embed_dim=6,
+            ),
+        ),
         "default": (
             "GIFStream with compression.",
             Config(
