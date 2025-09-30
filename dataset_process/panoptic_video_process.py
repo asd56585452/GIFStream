@@ -113,7 +113,7 @@ def run_colmap(path, offset):
     # img_undistorter_cmd = f"colmap image_undistorter --image_path {inputimagefolder} --input_path {distortedmodel} --output_path {folder} --output_type COLMAP"
     # subprocess.run(img_undistorter_cmd, shell=True, check=True)
 
-    shutil.rmtree(inputimagefolder)
+    # shutil.rmtree(inputimagefolder)
 
     # Move the sparse model from distorted/sparse to sparse/0
     target_sparse_path = os.path.join(folder, "sparse", "0")
