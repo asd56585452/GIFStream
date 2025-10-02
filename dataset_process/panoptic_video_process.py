@@ -101,7 +101,18 @@ def run_colmap(path, offset):
     if not os.path.exists(distortedmodel):
         os.makedirs(distortedmodel)
 
-    feature_extractor_cmd = f"colmap feature_extractor --database_path {dbfile} --image_path {inputimagefolder}"
+    max_features = 32768*2
+    peak_thresh = 0.001
+    edge_thresh = 20
+
+    feature_extractor_cmd = (
+        f"colmap feature_extractor "
+        f"--database_path {dbfile} "
+        f"--image_path {inputimagefolder} "
+        f"--SiftExtraction.max_num_features {max_features} "
+        f"--SiftExtraction.peak_threshold {peak_thresh} "
+        f"--SiftExtraction.edge_threshold {edge_thresh}"
+    )
     subprocess.run(feature_extractor_cmd, shell=True, check=True)
 
     feature_matcher_cmd = f"colmap exhaustive_matcher --database_path {dbfile}"

@@ -1,7 +1,7 @@
 # Set the directory containing the scenes
-SCENE_DIR="/home/cgvmis418/GIFStream/dataset/panoptic"
+SCENE_DIR="/home/tsaichenghan/GIFStream/dataset/panoptic"
 # Set the directory to store results
-RESULT_DIR="/home/cgvmis418/GIFStream/gscodec/GIFStream_branch_panoptic"
+RESULT_DIR="/home/tsaichenghan/GIFStream/gscodec/GIFStream_branch_panoptic"
 # Set the rendering trajectory path
 RENDER_TRAJ_PATH="ellipse"
 # List of scenes to process
@@ -44,12 +44,12 @@ do
                     --render_traj_path $RENDER_TRAJ_PATH --data_dir $SCENE_DIR/$SCENE/ --result_dir $EXP_NAME \
                     --eval_steps 7000 30000 --save_steps 7000 30000 \
                     --compression_sim --rd_lambda ${ENTROPY_LAMBDA_LIST[RATE]} --entropy_model_opt --rate $RATE \
-                    --batch_size 1 --GOP_size $(( MAX_GOP < GOP ? MAX_GOP : GOP)) --knn --start_frame $GOP_START_FRAME --steps_scaler 10
+                    --batch_size 1 --GOP_size $(( MAX_GOP < GOP ? MAX_GOP : GOP)) --knn --start_frame $GOP_START_FRAME
 
                 # Run evaluation and rendering after training
                 ./examples/benchmarks/monitor_vram_pro.sh CUDA_VISIBLE_DEVICES=0 python examples/simple_trainer_GIFStream.py $TYPE --disable_viewer --data_factor $DATA_FACTOR \
                     --render_traj_path $RENDER_TRAJ_PATH --data_dir $SCENE_DIR/$SCENE/ --result_dir $EXP_NAME \
-                    --ckpt $EXP_NAME/ckpts/ckpt_299999_rank0.pt \
+                    --ckpt $EXP_NAME/ckpts/ckpt_29999_rank0.pt \
                     --compression end2end  --rate $RATE \
                     --GOP_size $(( MAX_GOP < GOP ? MAX_GOP : GOP)) --knn --start_frame $GOP_START_FRAME 
             else
