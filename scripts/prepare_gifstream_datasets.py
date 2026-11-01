@@ -46,3 +46,4 @@ def setup_scene(scene_name: str):
 if __name__ == "__main__":
     for s in SCENES:
         setup_scene(s)
+
