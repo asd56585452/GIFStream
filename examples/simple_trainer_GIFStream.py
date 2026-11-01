@@ -435,6 +435,7 @@ class Runner:
         self, local_rank: int, world_rank, world_size: int, cfg: Config
     ) -> None:
         set_random_seed(42 + local_rank)
+        init_start_time = time.perf_counter()
 
         self.cfg = cfg
         self.world_rank = world_rank
@@ -607,8 +608,12 @@ class Runner:
         if self.cfg.knn:
             self.indices = None
         self.istraining = False
+        self.init_time_s = time.perf_counter() - init_start_time
 
     def init_dynamic(self) -> None:
+        if self.strategy_state.get("offset_grad2d") is None or self.strategy_state.get("offset_demon") is None:
+            print("Warning: offset_grad2d or offset_demon is None in init_dynamic, skipping initialization")
+            return
         grads = self.strategy_state["offset_grad2d"] / self.strategy_state["offset_demon"]
         grads[grads.isnan()] = 0.0
         grads_norm = torch.norm(grads, dim=-1).view((-1,self.cfg.n_offsets)).mean(dim=-1)
@@ -1035,6 +1040,8 @@ class Runner:
             self.profiler = prof if self.profiler_config.enabled else None
 
             # Training loop.
+            torch.cuda.synchronize()
+            torch.cuda.reset_peak_memory_stats()
             global_tic = time.time()
             pbar = tqdm.tqdm(range(init_step, max_steps))
             for step in pbar:
@@ -1188,10 +1195,16 @@ class Runner:
 
                 # save checkpoint before updating the model
                 if step in [i - 1 for i in cfg.save_steps] or step == max_steps - 1:
+                    train_recon_time_s = time.time() - global_tic
+                    init_time_s = getattr(self, "init_time_s", 0.0)
+                    total_recon_time_s = init_time_s + train_recon_time_s
                     mem = torch.cuda.max_memory_allocated() / 1024**3
                     stats = {
                         "mem": mem,
-                        "ellipse_time": time.time() - global_tic,
+                        "ellipse_time": train_recon_time_s,
+                        "train_recon_time_s": train_recon_time_s,
+                        "init_time_s": init_time_s,
+                        "total_recon_time_s": total_recon_time_s,
                         "num_GS": len(self.splats["anchors"]),
                     }
                     print("Step: ", step, stats)
@@ -1200,6 +1213,14 @@ class Runner:
                         "w",
                     ) as f:
                         json.dump(stats, f)
+                    with open(f"{self.stats_dir}/timing.json", "w") as f:
+                        json.dump({
+                            "init_time_s": init_time_s,
+                            "train_recon_time_s": train_recon_time_s,
+                            "total_recon_time_s": total_recon_time_s,
+                            "peak_vram_gb": mem,
+                            "num_GS": len(self.splats["anchors"]),
+                        }, f)
                     
                     # prepare data to be saved
                     data = {"step": step, "splats": self.splats.state_dict(), "decoders": self.decoders.state_dict()}
@@ -1308,6 +1329,7 @@ class Runner:
         )
         ellipse_time = 0
         metrics = defaultdict(list)
+        per_frame_metrics = []
         for i, data in enumerate(valloader):
             camtoworlds = data["camtoworld"].to(device)
             Ks = data["K"].to(device)
@@ -1348,9 +1370,21 @@ class Runner:
 
                 pixels_p = pixels.permute(0, 3, 1, 2)  # [1, 3, H, W]
                 colors_p = colors.permute(0, 3, 1, 2)  # [1, 3, H, W]
-                metrics["psnr"].append(self.psnr(colors_p, pixels_p))
-                metrics["ssim"].append(self.ssim(colors_p, pixels_p))
-                metrics["lpips"].append(self.lpips(colors_p, pixels_p))
+                cur_psnr = self.psnr(colors_p, pixels_p)
+                cur_ssim = self.ssim(colors_p, pixels_p)
+                cur_lpips = self.lpips(colors_p, pixels_p)
+                metrics["psnr"].append(cur_psnr)
+                metrics["ssim"].append(cur_ssim)
+                metrics["lpips"].append(cur_lpips)
+
+                frame_idx = self.cfg.start_frame + i
+                per_frame_metrics.append({
+                    "frame_idx": frame_idx,
+                    "view_name": f"{(frame_idx + 1):05d}.png",
+                    "psnr": cur_psnr.item(),
+                    "ssim": cur_ssim.item(),
+                    "lpips": cur_lpips.item(),
+                })
 
         if world_rank == 0:
             ellipse_time /= len(valloader)
@@ -1362,6 +1396,19 @@ class Runner:
                     "num_GS": len(self.splats["anchors"]),
                 }
             )
+            timing_file = f"{self.stats_dir}/timing.json"
+            if os.path.exists(timing_file):
+                try:
+                    with open(timing_file, "r") as tf:
+                        tdata = json.load(tf)
+                    stats.update({
+                        "init_time_s": tdata.get("init_time_s", 0.0),
+                        "train_recon_time_s": tdata.get("train_recon_time_s", 0.0),
+                        "total_recon_time_s": tdata.get("total_recon_time_s", 0.0),
+                        "peak_vram_gb": tdata.get("peak_vram_gb", 0.0),
+                    })
+                except Exception:
+                    pass
             print(
                 f"PSNR: {stats['psnr']:.3f}, SSIM: {stats['ssim']:.4f}, LPIPS: {stats['lpips']:.3f} "
                 f"Time: {stats['ellipse_time']:.3f}s/image "
@@ -1370,6 +1417,8 @@ class Runner:
             # save stats as json
             with open(f"{self.stats_dir}/{stage}_step{step:04d}.json", "w") as f:
                 json.dump(stats, f)
+            with open(f"{self.stats_dir}/{stage}_per_frame_step{step:04d}.json", "w") as f:
+                json.dump(per_frame_metrics, f)
             # save stats to tensorboard
             for k, v in stats.items():
                 self.writer.add_scalar(f"{stage}/{k}", v, step)

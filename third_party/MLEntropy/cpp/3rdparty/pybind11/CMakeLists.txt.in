@@ -6,7 +6,7 @@ include(ExternalProject)
 if(IS_DIRECTORY "${PROJECT_BINARY_DIR}/3rdparty/pybind11/pybind11-src/include")
     ExternalProject_Add(pybind11
         GIT_REPOSITORY    https://github.com/pybind/pybind11.git
-        GIT_TAG           v2.6.1
+        GIT_TAG           v2.13.6
         GIT_SHALLOW       1
         SOURCE_DIR        "${CMAKE_CURRENT_BINARY_DIR}/pybind11-src"
         BINARY_DIR        "${CMAKE_CURRENT_BINARY_DIR}/pybind11-build"
@@ -20,7 +20,7 @@ if(IS_DIRECTORY "${PROJECT_BINARY_DIR}/3rdparty/pybind11/pybind11-src/include")
 else()
     ExternalProject_Add(pybind11
         GIT_REPOSITORY    https://github.com/pybind/pybind11.git
-        GIT_TAG           v2.6.1
+        GIT_TAG           v2.13.6
         GIT_SHALLOW       1
         SOURCE_DIR        "${CMAKE_CURRENT_BINARY_DIR}/pybind11-src"
         BINARY_DIR        "${CMAKE_CURRENT_BINARY_DIR}/pybind11-build"

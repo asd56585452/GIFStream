@@ -1,0 +1,12 @@
+datasets
+dataset
+output
+.git
+__pycache__
+*.pyc
+*.pt
+*.ply
+third_party/MLEntropy/build
+build
+dist
+*.egg-info
