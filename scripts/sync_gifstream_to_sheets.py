@@ -149,12 +149,12 @@ def sync_to_sheets():
                     
     if t4_rows:
         print(f"[SYNC] Appending {len(t4_rows)} rows to 04_Frame_Quality...")
-        # Write in chunks of 500 to avoid CLI argument length limit
-        chunk_size = 500
+        # Write in chunks of 60 rows (1 GOP per chunk) to avoid CLI argument length limit
+        chunk_size = 60
         for i in range(0, len(t4_rows), chunk_size):
             chunk = t4_rows[i:i+chunk_size]
-            payload = json.dumps(chunk)
-            res = run_gsheets_cmd(["gsheets", "mutate", "append", SPREADSHEET_ID, "'04_Frame_Quality'!A1", "--json-data", payload])
+            batch_str = "|".join([",".join(row) for row in chunk])
+            res = run_gsheets_cmd(["gsheets", "mutate", "append", SPREADSHEET_ID, "'04_Frame_Quality'", batch_str])
             if res.returncode != 0:
                 print(f"[SYNC ERROR] Failed appending to 04_Frame_Quality: {res.stderr}")
     else:
@@ -202,8 +202,8 @@ def sync_to_sheets():
                 
     if t3_rows:
         print(f"[SYNC] Appending {len(t3_rows)} rows to 03_GoF_Details...")
-        payload = json.dumps(t3_rows)
-        res = run_gsheets_cmd(["gsheets", "mutate", "append", SPREADSHEET_ID, "'03_GoF_Details'!A1", "--json-data", payload])
+        batch_str = "|".join([",".join(row) for row in t3_rows])
+        res = run_gsheets_cmd(["gsheets", "mutate", "append", SPREADSHEET_ID, "'03_GoF_Details'", batch_str])
         if res.returncode != 0:
             print(f"[SYNC ERROR] Failed appending to 03_GoF_Details: {res.stderr}")
     else:
@@ -277,8 +277,8 @@ def sync_to_sheets():
             
     if t2_rows:
         print(f"[SYNC] Appending {len(t2_rows)} scenes to 02_Scene_Summary...")
-        payload = json.dumps(t2_rows)
-        res = run_gsheets_cmd(["gsheets", "mutate", "append", SPREADSHEET_ID, "'02_Scene_Summary'!A1", "--json-data", payload])
+        batch_str = "|".join([",".join(row) for row in t2_rows])
+        res = run_gsheets_cmd(["gsheets", "mutate", "append", SPREADSHEET_ID, "'02_Scene_Summary'", batch_str])
         if res.returncode != 0:
             print(f"[SYNC ERROR] Failed appending to 02_Scene_Summary: {res.stderr}")
     else:
