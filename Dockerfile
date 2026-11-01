@@ -1,10 +1,12 @@
 FROM asdggg/gscodec-studio:latest
 
+ENV FORCE_CUDA=1
 ENV TORCH_CUDA_ARCH_LIST="12.0;12.0+PTX"
+ENV CUDA_HOME=/usr/local/cuda
 WORKDIR /workspace
 
-# Install torch-scatter with sm_120 support
-RUN pip install torch-scatter --no-build-isolation
+# Install torch-scatter compiled from source with CUDA support for sm_120
+RUN pip install torch-scatter --no-cache-dir --no-binary torch-scatter --no-build-isolation
 
 # Install gridencoder
 COPY third_party/gridencoder /workspace/third_party/gridencoder
@@ -22,3 +24,4 @@ COPY . /workspace
 RUN pip install --no-build-isolation -e .
 
 WORKDIR /workspace
+

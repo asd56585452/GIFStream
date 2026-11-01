@@ -65,6 +65,7 @@ for SCENE in "${SCENES[@]}"; do
                     -v /media/tsaichenghan/2TBSSD:/media/tsaichenghan/2TBSSD \
                     -v "$TORCH_CACHE:/tmp/.cache/torch" \
                     -e TORCH_HOME=/tmp/.cache/torch \
+                    -e MPLCONFIGDIR=/tmp/mpl_config \
                     -e HOME=/tmp \
                     asdggg/gifstream:latest python3 examples/simple_trainer_GIFStream.py "$TYPE" \
                     --disable_viewer --data_factor 2 --render_traj_path ellipse \
@@ -86,6 +87,7 @@ for SCENE in "${SCENES[@]}"; do
                     -v /media/tsaichenghan/2TBSSD:/media/tsaichenghan/2TBSSD \
                     -v "$TORCH_CACHE:/tmp/.cache/torch" \
                     -e TORCH_HOME=/tmp/.cache/torch \
+                    -e MPLCONFIGDIR=/tmp/mpl_config \
                     -e HOME=/tmp \
                     asdggg/gifstream:latest python3 examples/simple_trainer_GIFStream.py "$TYPE" \
                     --disable_viewer --data_factor 2 --render_traj_path ellipse \
@@ -105,6 +107,7 @@ for SCENE in "${SCENES[@]}"; do
             -v /media/tsaichenghan/2TBSSD:/media/tsaichenghan/2TBSSD \
             -v "$TORCH_CACHE:/tmp/.cache/torch" \
             -e TORCH_HOME=/tmp/.cache/torch \
+            -e MPLCONFIGDIR=/tmp/mpl_config \
             -e HOME=/tmp \
             asdggg/gifstream:latest python3 examples/simple_trainer_GIFStream.py "$TYPE" \
             --disable_viewer --data_factor 2 --render_traj_path ellipse \
@@ -127,3 +130,4 @@ echo ""
 echo "=========================================================="
 echo " All GIFStream N3DV Benchmark Runs Finished Successfully!"
 echo "=========================================================="
+

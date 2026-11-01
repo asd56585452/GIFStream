@@ -1,8 +1,11 @@
 .clangd
 compile_commands.json
 
-# Visual Studio Code configs.
-.vscode/
+# Local symlinks/directories for datasets and output
+dataset
+datasets
+output
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
