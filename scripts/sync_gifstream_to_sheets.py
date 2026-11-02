@@ -36,7 +36,7 @@ def run_gsheets_cmd(cmd_list):
     return res
 
 def check_auth():
-    res = run_gsheets_cmd(["gsheets", "read", "get", SPREADSHEET_ID, "'01_Leaderboard'!A1:A5"])
+    res = run_gsheets_cmd(["gsheets", "readonly", "read", SPREADSHEET_ID, "'01_Leaderboard'!A1:A5"])
     return res.returncode == 0
 
 def collect_gifstream_results():
