@@ -18,7 +18,10 @@ mkdir -p "$OUTPUT_DIR"
 mkdir -p "$TORCH_CACHE"
 
 echo "=========================================================="
-echo " Starting GIFStream (CVPR 2025) N3DV Benchmark Pipeline"
+echo " Starting GIFStream (CVPR 2025) Official N3DV Benchmark Pipeline"
+echo " Strict Docker Isolation: asdggg/gifstream:latest"
+echo " Strict Read-Only Datasets: /media/tsaichenghan/2TBSSD/datasets (:ro)"
+echo " Official COLMAP Triangulation: Mandatory replication"
 echo " Target Scenes: ${SCENES[*]}"
 echo " Output Directory: $OUTPUT_DIR"
 echo "=========================================================="
@@ -55,14 +58,25 @@ for SCENE in "${SCENES[@]}"; do
         echo " Output: $EXP_NAME"
         echo "----------------------------------------------------------"
         
-        # Check if 30k checkpoint exists to skip training
+        # 1. Ensure Official COLMAP Triangulation exists in Docker
+        echo "[COLMAP] Ensuring official COLMAP triangulation in Docker..."
+        docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            -e QT_QPA_PLATFORM=offscreen \
+            -v "$BASE_DIR:/workspace" \
+            -v /media/tsaichenghan/2TBSSD/datasets:/datasets:ro \
+            -v /media/tsaichenghan/2TBSSD/GIFStream:/media/tsaichenghan/2TBSSD/GIFStream \
+            asdggg/gifstream:latest python3 /workspace/scripts/generate_official_colmap_in_docker.py --scenes "$SCENE" --gops "$GOP_ID"
+            
+        # 2. Check if 30k checkpoint exists to skip training
         if [ ! -f "$EXP_NAME/ckpts/ckpt_29999_rank0.pt" ]; then
             if [ "$GOP_ID" -eq 0 ]; then
                 echo "[TRAIN] GOP 0: Training from scratch (30,000 steps)..."
                 docker run --rm --gpus all \
                     --user "$(id -u):$(id -g)" \
                     -v "$BASE_DIR:/workspace" \
-                    -v /media/tsaichenghan/2TBSSD:/media/tsaichenghan/2TBSSD \
+                    -v /media/tsaichenghan/2TBSSD/datasets:/datasets:ro \
+                    -v /media/tsaichenghan/2TBSSD/GIFStream:/media/tsaichenghan/2TBSSD/GIFStream \
                     -v "$TORCH_CACHE:/tmp/.cache/torch" \
                     -e TORCH_HOME=/tmp/.cache/torch \
                     -e MPLCONFIGDIR=/tmp/mpl_config \
@@ -84,7 +98,8 @@ for SCENE in "${SCENES[@]}"; do
                 docker run --rm --gpus all \
                     --user "$(id -u):$(id -g)" \
                     -v "$BASE_DIR:/workspace" \
-                    -v /media/tsaichenghan/2TBSSD:/media/tsaichenghan/2TBSSD \
+                    -v /media/tsaichenghan/2TBSSD/datasets:/datasets:ro \
+                    -v /media/tsaichenghan/2TBSSD/GIFStream:/media/tsaichenghan/2TBSSD/GIFStream \
                     -v "$TORCH_CACHE:/tmp/.cache/torch" \
                     -e TORCH_HOME=/tmp/.cache/torch \
                     -e MPLCONFIGDIR=/tmp/mpl_config \
@@ -99,12 +114,13 @@ for SCENE in "${SCENES[@]}"; do
             fi
         fi
         
-        # Run End-to-End Compression & Validation
+        # 3. Run End-to-End Compression & Validation
         echo "[COMPRESS] Running end-to-end compression and decompression evaluation..."
         docker run --rm --gpus all \
             --user "$(id -u):$(id -g)" \
             -v "$BASE_DIR:/workspace" \
-            -v /media/tsaichenghan/2TBSSD:/media/tsaichenghan/2TBSSD \
+            -v /media/tsaichenghan/2TBSSD/datasets:/datasets:ro \
+            -v /media/tsaichenghan/2TBSSD/GIFStream:/media/tsaichenghan/2TBSSD/GIFStream \
             -v "$TORCH_CACHE:/tmp/.cache/torch" \
             -e TORCH_HOME=/tmp/.cache/torch \
             -e MPLCONFIGDIR=/tmp/mpl_config \
@@ -130,4 +146,3 @@ echo ""
 echo "=========================================================="
 echo " All GIFStream N3DV Benchmark Runs Finished Successfully!"
 echo "=========================================================="
-

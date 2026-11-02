@@ -608,7 +608,17 @@ class Runner:
         if self.cfg.knn:
             self.indices = None
         self.istraining = False
-        self.init_time_s = time.perf_counter() - init_start_time
+        colmap_time_file = os.path.join(cfg.data_dir, f"colmap_{cfg.start_frame}", "init_time.txt")
+        if os.path.exists(colmap_time_file):
+            try:
+                with open(colmap_time_file, "r") as f:
+                    self.init_time_s = float(f.read().strip())
+                print(f"[INIT] Loaded official COLMAP Init_Time: {self.init_time_s:.2f}s from {colmap_time_file}")
+            except Exception as e:
+                print(f"[INIT WARN] Failed reading {colmap_time_file}: {e}")
+                self.init_time_s = time.perf_counter() - init_start_time
+        else:
+            self.init_time_s = time.perf_counter() - init_start_time
 
     def init_dynamic(self) -> None:
         if self.strategy_state.get("offset_grad2d") is None or self.strategy_state.get("offset_demon") is None:

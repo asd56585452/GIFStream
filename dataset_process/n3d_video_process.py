@@ -147,7 +147,7 @@ def getcolmapsinglen3d(folder, offset):
     if exit_code != 0:
         exit(exit_code)
 
-    featurematcher = "colmap exhaustive_matcher --database_path " + dbfile
+    featurematcher = "colmap exhaustive_matcher --database_path " + dbfile + " --SiftMatching.use_gpu 0"
     exit_code = os.system(featurematcher)
     if exit_code != 0:
         exit(exit_code)
