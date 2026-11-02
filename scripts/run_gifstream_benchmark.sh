@@ -64,7 +64,7 @@ for SCENE in "${SCENES[@]}"; do
             --user "$(id -u):$(id -g)" \
             -e QT_QPA_PLATFORM=offscreen \
             -v "$BASE_DIR:/workspace" \
-            -v /media/tsaichenghan/2TBSSD/datasets:/datasets:ro \
+            -v /media/tsaichenghan/2TBSSD/datasets:/media/tsaichenghan/2TBSSD/datasets:ro \
             -v /media/tsaichenghan/2TBSSD/GIFStream:/media/tsaichenghan/2TBSSD/GIFStream \
             asdggg/gifstream:latest python3 /workspace/scripts/generate_official_colmap_in_docker.py --scenes "$SCENE" --gops "$GOP_ID"
             
@@ -75,7 +75,7 @@ for SCENE in "${SCENES[@]}"; do
                 docker run --rm --gpus all \
                     --user "$(id -u):$(id -g)" \
                     -v "$BASE_DIR:/workspace" \
-                    -v /media/tsaichenghan/2TBSSD/datasets:/datasets:ro \
+                    -v /media/tsaichenghan/2TBSSD/datasets:/media/tsaichenghan/2TBSSD/datasets:ro \
                     -v /media/tsaichenghan/2TBSSD/GIFStream:/media/tsaichenghan/2TBSSD/GIFStream \
                     -v "$TORCH_CACHE:/tmp/.cache/torch" \
                     -e TORCH_HOME=/tmp/.cache/torch \
@@ -98,7 +98,7 @@ for SCENE in "${SCENES[@]}"; do
                 docker run --rm --gpus all \
                     --user "$(id -u):$(id -g)" \
                     -v "$BASE_DIR:/workspace" \
-                    -v /media/tsaichenghan/2TBSSD/datasets:/datasets:ro \
+                    -v /media/tsaichenghan/2TBSSD/datasets:/media/tsaichenghan/2TBSSD/datasets:ro \
                     -v /media/tsaichenghan/2TBSSD/GIFStream:/media/tsaichenghan/2TBSSD/GIFStream \
                     -v "$TORCH_CACHE:/tmp/.cache/torch" \
                     -e TORCH_HOME=/tmp/.cache/torch \
@@ -119,7 +119,7 @@ for SCENE in "${SCENES[@]}"; do
         docker run --rm --gpus all \
             --user "$(id -u):$(id -g)" \
             -v "$BASE_DIR:/workspace" \
-            -v /media/tsaichenghan/2TBSSD/datasets:/datasets:ro \
+            -v /media/tsaichenghan/2TBSSD/datasets:/media/tsaichenghan/2TBSSD/datasets:ro \
             -v /media/tsaichenghan/2TBSSD/GIFStream:/media/tsaichenghan/2TBSSD/GIFStream \
             -v "$TORCH_CACHE:/tmp/.cache/torch" \
             -e TORCH_HOME=/tmp/.cache/torch \

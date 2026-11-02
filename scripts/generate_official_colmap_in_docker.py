@@ -21,7 +21,7 @@ sys.path.append("/workspace/dataset_process")
 from n3d_video_process import convertdynerftocolmapdb, getcolmapsinglen3d
 
 SCENES = ["sear_steak", "coffee_martini", "cook_spinach", "cut_roasted_beef", "flame_salmon_1", "flame_steak"]
-DATASETS_SRC = Path("/datasets")
+DATASETS_SRC = Path("/media/tsaichenghan/2TBSSD/datasets") if Path("/media/tsaichenghan/2TBSSD/datasets").exists() else Path("/datasets")
 GIFSTREAM_DATASETS = Path("/media/tsaichenghan/2TBSSD/GIFStream/datasets")
 
 def generate_scene_gop_colmap(scene: str, frame: int, force: bool = False) -> float:
