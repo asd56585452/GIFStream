@@ -61,24 +61,17 @@ def collect_gifstream_results():
                     with open(per_frame_file, "r") as f:
                         per_frame = json.load(f)
                         
-                # Measure bitstream / model file sizes
-                model_files = list(gop_dir.glob("*.npz")) + list(gop_dir.glob("*.bin")) + list(gop_dir.glob("ckpts/*.pt"))
-                compress_dir = gop_dir / "compress"
-                if compress_dir.exists():
-                    model_files.extend(list(compress_dir.glob("*.*")))
-                    
-                total_bytes = 0
-                for mf in model_files:
-                    if "ckpt_" in mf.name and "29999" not in mf.name and "6999" not in mf.name:
-                        continue
-                    if compress_dir.exists() and mf.parent != compress_dir and mf.suffix == ".pt":
-                        continue
-                    total_bytes += mf.stat().st_size
-                    
-                size_mb = total_bytes / (1024 * 1024)
-                if size_mb < 0.001:
-                    size_mb = 1.68 # Default GOP size fallback
-                    
+                # Model size = delivered bitstream only: every file under compression/
+                # (anchors, factors, offsets, scales, per-frame time_features, nets.pt
+                # decoder/entropy MLPs, meta.json). Training checkpoints ckpts/*.pt are
+                # excluded. No fallback: a missing bitstream is an error, not a default.
+                compress_dir = gop_dir / "compression"
+                bitstream = [p for p in compress_dir.rglob("*") if p.is_file()] if compress_dir.is_dir() else []
+                if not bitstream:
+                    raise RuntimeError(f"No compression bitstream in {compress_dir}")
+                total_bytes = sum(p.stat().st_size for p in bitstream)
+                size_mb = total_bytes / (1024 * 1024)  # MiB
+
                 gops_data[gop_id] = {
                     "stats": stats,
                     "per_frame": per_frame,
